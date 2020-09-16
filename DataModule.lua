@@ -3,7 +3,9 @@ local module = {}
 -- Enables the ability to encode, and code JSON strings.
 HttpService = game:GetService("HttpService")
 
--- 
+-- This function will return a table listed with 2 additional data tables for organization. Change the name of the data tables, and values within
+-- 'info' to fit your needs. The 'info' table is used to store data. See "examples.lua" in order to see how we manage it.
+
 function module.grabPlayerData()
 	
 	local playerDefaultData = {
@@ -41,49 +43,13 @@ function module.grabPlayerData()
 	return playerDefaultData
 end
 
-
-function module.grabDefaultCharData()
-	
-	local charData = {
-		["message"] = "success",
-		["info"] = {
-			["stats"] = {
-				["health"] = {
-					["current"] = 1,
-					["max"] = 1
-				},
-				["experience"] = {
-					["current"] = 0,
-					["max"] = 50
-				},
-				["mana"] = {
-					["current"] = 0,
-					["max"] = 0
-				},
-				["damage"] = 0,
-				["resistance"] = 0,
-				["piercing"] = 0,
-				["speed"] = 0,
-				["crit"] = 0
-			},
-			
-			["inventory"] = {},
-			
-			["equippedItems"] = {
-				["armor"] = {},
-				["hotbar"] = {}
-			},
-			
-			["equippedVanity"] = {}
-		}
-	}
-	
-	return charData
-end
+-- Below here, you can add additional function to make management/adding data/changing data smoother.
 
 
--- Redone, unverified.
-function module.pullDecoded(plr, plrFolder)
+-- The purpose of the script is to decode data in a datastore so it can be modified and saved. See "examples.lua" to see how to use it.
+-- the "pullDecoded" function takes the parameter of the player.
+-- 'oddTable' is used to store decoded data.
+function module.pullDecoded(plr)
 	local oddTable = {}
 	
 	local DataModule = require(script)
@@ -101,7 +67,8 @@ function module.pullDecoded(plr, plrFolder)
 	return oddTable
 end
 
-
+-- EncodeUpdatedRaw takes the raw decoded data, and recodes it using JSONEncode. This creates a new JSON String.
+-- see "examples.lua" to see how its being used.
 function module.EncodeUpdatedRaw(rawData)
 	local newData = {}
 	for i,v in pairs(rawData) do
@@ -113,14 +80,8 @@ function module.EncodeUpdatedRaw(rawData)
 	return newData
 end
 
--- Redone, unverified.
-function module.grabFolder(plr)
-	if plr:FindFirstChild("StorageReader") then
-		return plr.StorageReader
-	end
-end
-
--- Redone, unverified.
+-- Push save is used to save a JSON String 'rawData'.
+-- See "exmaples.lua" to see how this is done.
 function module.pushSave(plr, rawData)
 	
 	local DataStore2 = require(script.Parent.MainModule)
