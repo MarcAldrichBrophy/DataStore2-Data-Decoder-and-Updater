@@ -1,2 +1,4 @@
 # DataStore2-AdvancedManagement-Lua
-Using Kampfkarren's DataStore2, I've created two advanced management scripts that makes creating/saving data a lot easier.
+Uses Kampfkarren's DataStore2 module.
+
+Dynamically creates data objects synthesized from raw JSON data, decompressed from a JSON string.
