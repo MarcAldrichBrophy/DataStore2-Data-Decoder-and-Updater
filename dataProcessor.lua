@@ -1,25 +1,17 @@
---[[
-  The purpose of this script is to load, save, delete, and write on top of existing data.
-  This script creates a folder within each player called 'DataReader'. This folder is used to check a players data through the server/client boundary.
-  DO NOT attempt to write on the folder, instead, use the functions on the DataModule.
-  This script uses an IntValue called '_version' in order to clear out the datastore. A new version means a new datastore, since the ds name is changing.
-  This script can be configured to hold multiple datastores (as had previously).
-]]
+
 -- Core service grabs.
 HttpService = game:GetService("HttpService")
 repStore = game:GetService("ReplicatedStorage")
 servStore = game:GetService("ServerScriptService")
 scriptServ = game:GetService("ServerScriptService")
 
-DataStore2 = require(script.Parent:WaitForChild("MainModule"))
+DataStore2 = require(script.Parent:WaitForChild("DataStore2"))
 dataModule = require(script.Parent:WaitForChild("DataModule"))
 
 local defaultData = dataModule.grabPlayerData()
 
 -- Data keys.
-
-_version = script.Parent:WaitForChild("_version").Value
-masterDataName = "dataName".. _version
+masterDataName = "dataStore_Name"
 
 game.Players.PlayerAdded:Connect(function(plr)
 	
@@ -37,6 +29,7 @@ game.Players.PlayerAdded:Connect(function(plr)
 	end
 	
 	local dataLoaded = makeValue("masterDataLoaded", "BoolValue", plr, false)
+	local dataYielding = makeValue("dataYielding", "BoolValue", plr, false)
 	
 	-- Function that handles the saving and loading of data.
 	--------------------------------------------------------------------------------
@@ -47,7 +40,6 @@ game.Players.PlayerAdded:Connect(function(plr)
 	local function handleData(_dataStore, defaultToHandle)
 		
 		local genericError = "Data could not be loaded for "
-		
 		-- The datastore to handle, _dataStore being the store,
 		-- defaultToHandle is the default backup.
 		local fullPull = _dataStore:Get(defaultToHandle)
@@ -55,12 +47,15 @@ game.Players.PlayerAdded:Connect(function(plr)
 		-- Creates data values inside of folder (dataFolder) by looping through the raw data.
 		local function generateData(dataFolder, rawData)
 			
+			
 			local function genVal(_v, key, par)
 				
 				local function decideData(valBeingPassed, keyToCheck, parToCheck, valType)
 					if parToCheck:FindFirstChild(keyToCheck) then
 						local thisDataValue = parToCheck:FindFirstChild(keyToCheck)
-						thisDataValue.Value = valBeingPassed
+						if thisDataValue.Value ~= valBeingPassed then
+							thisDataValue.Value = valBeingPassed
+						end
 					else
 						local value = makeValue(keyToCheck, valType, parToCheck, valBeingPassed)
 					end
@@ -90,61 +85,52 @@ game.Players.PlayerAdded:Connect(function(plr)
 				genVal(v, key, dataFolder)
 			end
 			
-			local function cleanData()
-				-- "rawData is each data node."
+			-- cleanData updates changed sections
+			
+			local function purgeData(folderToClean, rawDataToClean)
 				
-				local function isInTable(tableValue, toFind)
-					local found = false
-					for key ,val in pairs(tableValue) do
-						if key == toFind then
-							found = true
-				            break
-						end
-					end
-					return found
-				end
-				
-				local function purgeData(folderToCheck, rawDataToCheck)
-					for _, nodeData in pairs(folderToCheck:GetChildren()) do
-						
-						if rawDataToCheck ~= nil then
-							if isInTable(rawDataToCheck, nodeData.Name) then
-								-- Data exists.
-							elseif nodeData.ClassName == "Folder" then
-								local rawDataTable = rawDataToCheck[nodeData.Name]
-								purgeData(nodeData, rawDataTable)
+				for _, folderElement in pairs(folderToClean:GetChildren()) do
+					
+					if rawDataToClean ~= nil then
+						if folderElement.ClassName == "Folder" then
+							if rawDataToClean[folderElement.Name] == nil then
+								folderElement:Destroy()
 							else
-								nodeData:Destroy()
+								local rawDataTable = rawDataToClean[folderElement.Name]
+								purgeData(folderElement, rawDataTable)
 							end
-						else
-							folderToCheck:Destroy()
-							warn(folderToCheck.Name.. " cannot be found on data.")
+						elseif rawDataToClean[folderElement.Name] == nil then
+							folderElement:Destroy()
 						end
-						
+					else
+						folderToClean:Destroy()
+						warn(folderToClean.Name.. " cannot be found on data.")
 					end
+					
 				end
-				
+			end
+			
+			local function sift()
 				for nodeKey, nodeData in pairs(dataFolder:GetChildren()) do
 					--warn(key)
 					--print(node)
 					if nodeData.ClassName == "Folder" then -- Gets nodes in data folder.
 						-- Start of purging.
-						if isInTable(rawData.info, nodeData.Name) then
+						if rawData.info[nodeData.Name] then
 							purgeData(nodeData, rawData.info[nodeData.Name])
 						else
 							nodeData:Destroy()
 						end
 					else
-						if isInTable(rawData.info, nodeData.Name) == false then
+						if not rawData.info[nodeData.Name] then
 							nodeData:Destroy()
 						end
 					end
 				end
-				
 			end
-			cleanData()
 			
-			print("Data Handled")
+			sift()
+			--print("Data Handled")
 		end
 		
 		-- Reads through each node in the datastore and sends them to "createData".
@@ -176,7 +162,12 @@ game.Players.PlayerAdded:Connect(function(plr)
 				pullData(dataFolder)
 			end
 		end
+		
+		plr.dataYielding.Value = true
+		
 		main()
+		
+		plr.dataYielding.Value = false
 		
 	end
 	-- END OF HANDLE DATA
@@ -188,10 +179,16 @@ game.Players.PlayerAdded:Connect(function(plr)
 	handleData(plrData, defaultData)
 	
 	local function pushData()
-		handleData(plrData, defaultData)
+		if plr:FindFirstChild("dataYielding") then
+			if plr.dataYielding.Value == true then
+				repeat wait() print("Data Yielding...") until plr.dataYielding.Value == false
+				handleData(plrData, defaultData)
+			else
+				handleData(plrData, defaultData)
+			end
+		end
 	end
 	
 	-- When data updates, push values to the reader folders.
 	plrData:OnUpdate(pushData)
-	
 end)
